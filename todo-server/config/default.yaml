@@ -1,0 +1,6 @@
+database:
+  uri: mongodb://localhost:27017
+  name: todo
+services:
+  port: 3000
+  host: localhost
