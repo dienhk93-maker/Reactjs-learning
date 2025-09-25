@@ -3,7 +3,7 @@ import { buildUrl } from "../config/api.config";
 
 export const todoService = {
   async getList(search?: string): Promise<Todo[]> {
-    const params: Record<string, any> = {};
+    const params: Record<string, string> = {};
     if (search) params.q = search;
     const res = await fetch(buildUrl("/todos", params), { cache: "no-store" });
     if (!res.ok) throw new Error(`Failed to fetch todos (${res.status})`);

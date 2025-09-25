@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { FilterQuery } from 'mongoose';
 import { TodoRepository } from './repositories/todo.repository';
 import { Todo, TodoDocument } from './schemas/todo.schema';
@@ -27,7 +31,7 @@ export class TodoService {
 
   async update(id: string, updateTodoDto: UpdateTodoDto): Promise<Todo> {
     const updatedTodo = await this.todoRepository.update(id, updateTodoDto);
-    
+
     if (!updatedTodo) {
       throw new NotFoundException(`Todo with ID "${id}" not found`);
     }
@@ -35,9 +39,15 @@ export class TodoService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.todoRepository.delete(id);
-    if (!result) {
-      throw new NotFoundException(`Todo with ID "${id}" not found`);
+    try {
+      const result = await this.todoRepository.delete(id);
+      if (!result) {
+        throw new NotFoundException(`Todo with ID "${id}" not found`);
+      }
+    } catch (error) {
+      throw new InternalServerErrorException(
+        `Error deleting todo with ID "${id}": ${error.message}`,
+      );
     }
   }
 

@@ -1,9 +1,9 @@
 // src/hooks/useTodoMutations.ts
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { todoService } from '../services/todoService';
-import type { CreateTodoInput, Todo } from '../types/todo';
+import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { todoService } from "../services/todoService";
+import type { CreateTodoInput, Todo } from "../types/todo";
 
-const TODOS_KEY = ['todos'] as const;
+const TODOS_KEY = ["todos"] as const;
 
 type Ctx = { prev?: Todo[] };
 
@@ -19,7 +19,7 @@ export function useCreateTodo() {
 
       // build safe optimistic Todo
       const optimistic: Todo = {
-        id: `temp-${Date.now()}`,
+        _id: `temp-${Date.now()}`,
         title: payload.title,
         description: payload.description,
         tags: payload.tags,
@@ -36,9 +36,9 @@ export function useCreateTodo() {
       if (ctx?.prev) qc.setQueryData(TODOS_KEY, ctx.prev);
     },
     onSuccess: (serverTodo) => {
-      // replace optimistic by id prefix
+      // replace optimistic by _id prefix
       qc.setQueryData<Todo[]>(TODOS_KEY, (old = []) =>
-        old.map((t) => (t.id.startsWith('temp-') ? serverTodo : t)),
+        old.map((t) => (t._id.startsWith("temp-") ? serverTodo : t))
       );
     },
     onSettled: () => {
@@ -53,22 +53,22 @@ export function useUpdateTodo() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (args: { id: string; patch: Partial<Omit<Todo, 'id'>> }) =>
-      todoService.update(args.id, args.patch), // must return updated Todo (or nothing)
-    onMutate: async ({ id, patch }): Promise<Ctx> => {
+    mutationFn: (args: { _id: string; patch: Partial<Omit<Todo, "_id">> }) =>
+      todoService.update(args._id, args.patch), // must return updated Todo (or nothing)
+    onMutate: async ({ _id, patch }): Promise<Ctx> => {
       await qc.cancelQueries({ queryKey: TODOS_KEY });
       const prev = qc.getQueryData<Todo[]>(TODOS_KEY) ?? [];
 
       qc.setQueryData<Todo[]>(TODOS_KEY, (old = []) =>
         old.map((t) =>
-          t.id === id
+          t._id === _id
             ? {
                 ...t,
                 ...patch,
                 updatedAt: new Date(),
               }
-            : t,
-        ),
+            : t
+        )
       );
 
       return { prev };
@@ -87,12 +87,14 @@ export function useDeleteTodo() {
   const qc = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => todoService.remove(id),
-    onMutate: async (id): Promise<Ctx> => {
+    mutationFn: (_id: string) => todoService.remove(_id),
+    onMutate: async (_id): Promise<Ctx> => {
       await qc.cancelQueries({ queryKey: TODOS_KEY });
       const prev = qc.getQueryData<Todo[]>(TODOS_KEY) ?? [];
 
-      qc.setQueryData<Todo[]>(TODOS_KEY, (old = []) => old.filter((t) => t.id !== id));
+      qc.setQueryData<Todo[]>(TODOS_KEY, (old = []) =>
+        old.filter((t) => t._id !== _id)
+      );
 
       return { prev };
     },

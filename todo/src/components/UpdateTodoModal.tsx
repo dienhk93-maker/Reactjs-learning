@@ -1,19 +1,25 @@
 // src/components/TodoCreateModal.tsx
 import React, { useEffect, useRef, useState } from "react";
-import type { CreateTodoInput } from "../types/todo";
+import type { CreateTodoInput, Todo } from "../types/todo";
 
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (payload: CreateTodoInput) => void;
+  onUpdate: (_id: string, payload: CreateTodoInput) => void;
+  todo: Todo;
 };
 
-export default function TodoCreateModal({ isOpen, onClose, onCreate }: Props) {
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [completed, setCompleted] = useState(false);
+export default function UpdateCreateModal({
+  isOpen,
+  onClose,
+  onUpdate,
+  todo,
+}: Props) {
+  const [title, setTitle] = useState(todo.title);
+  const [description, setDescription] = useState(todo?.description || "");
+  const [completed, setCompleted] = useState(todo.completed);
   const [tagInput, setTagInput] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>(todo?.tags || []);
   const [touched, setTouched] = useState(false);
 
   const firstRef = useRef<HTMLInputElement>(null);
@@ -23,14 +29,14 @@ export default function TodoCreateModal({ isOpen, onClose, onCreate }: Props) {
   useEffect(() => {
     if (isOpen) setTimeout(() => firstRef.current?.focus(), 0);
     else {
-      setTitle("");
-      setDescription("");
-      setCompleted(false);
-      setTags([]);
+      setTitle(todo.title);
+      setDescription(todo?.description || "");
+      setCompleted(todo.completed);
+      setTags(todo?.tags || []);
       setTagInput("");
       setTouched(false);
     }
-  }, [isOpen]);
+  }, [isOpen, todo.title, todo.description, todo.completed, todo.tags]);
 
   // Close on ESC
   useEffect(() => {
@@ -65,7 +71,7 @@ export default function TodoCreateModal({ isOpen, onClose, onCreate }: Props) {
     e.preventDefault();
     setTouched(true);
     if (invalid) return;
-    onCreate({
+    onUpdate(todo._id, {
       title: title.trim(),
       description: description.trim() || undefined,
       tags: tags.length ? tags : undefined,
