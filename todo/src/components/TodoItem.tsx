@@ -1,10 +1,13 @@
-import type { Todo } from "../types/todo";
+import React from "react";
+import type { CreateTodoInput, Todo } from "../types/todo";
 import { Tag } from "./Tag";
+import TodoUpdateModal from "./UpdateTodoModal";
 
 type Props = {
   todo: Todo;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
+  onUpdateTodo: (_id: string, payload: CreateTodoInput) => void;
 };
 
 function timeAgo(d: Date | string) {
@@ -21,8 +24,14 @@ function timeAgo(d: Date | string) {
   return date.toLocaleDateString();
 }
 
-export default function TodoItem({ todo, onToggle, onDelete }: Props) {
+export default function TodoItem({
+  todo,
+  onToggle,
+  onDelete,
+  onUpdateTodo,
+}: Props) {
   const completed = todo.completed;
+  const [isUpdateOpen, setUpdateOpen] = React.useState(false);
 
   const cardCls = completed
     ? "border-emerald-200 bg-emerald-50 hover:border-emerald-300"
@@ -39,13 +48,13 @@ export default function TodoItem({ todo, onToggle, onDelete }: Props) {
       className={`group rounded-xl border p-4 shadow-sm transition ${cardCls}`}
       aria-label={todo.title}
     >
-      <div className="flex items-start gap-4">
+      <div className="flex items-center gap-4">
         {/* Checkbox + title/desc */}
-        <label className="flex flex-1 cursor-pointer select-none items-start gap-3">
+        <div className="flex flex-1 cursor-pointer select-none items-start gap-3" onDoubleClick={() => setUpdateOpen(true)}>
           <input
             type="checkbox"
             checked={completed}
-            onChange={() => onToggle(todo.id)}
+            onChange={() => onToggle(todo._id)}
             className={`h-5 w-5 rounded focus:outline-none focus:ring-2 focus:ring-offset-2 ${accentCls}`}
             aria-checked={completed}
             aria-label={
@@ -85,12 +94,20 @@ export default function TodoItem({ todo, onToggle, onDelete }: Props) {
               </span>
             </div>
           </div>
-        </label>
+        </div>
 
         {/* Actions */}
-        <div className="flex shrink-0 items-start gap-1">
+        <div className="flex shrink-0 gap-1">
           <button
-            onClick={() => onDelete(todo.id)}
+            onClick={() => setUpdateOpen(true)}
+            className="rounded-md p-2 text-blue-600 hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-300"
+            title="Edit"
+            aria-label={`Edit "${todo.title}"`}
+          >
+            ✏️
+          </button>
+          <button
+            onClick={() => onDelete(todo._id)}
             className="rounded-md p-2 text-rose-600 hover:bg-rose-50 focus:outline-none focus:ring-2 focus:ring-rose-300"
             title="Delete"
             aria-label={`Delete "${todo.title}"`}
@@ -99,6 +116,13 @@ export default function TodoItem({ todo, onToggle, onDelete }: Props) {
           </button>
         </div>
       </div>
+
+      <TodoUpdateModal
+        isOpen={isUpdateOpen}
+        onClose={() => setUpdateOpen(false)}
+        onUpdate={onUpdateTodo}
+        todo={todo}
+      />
     </li>
   );
 }

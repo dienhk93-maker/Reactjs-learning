@@ -82,27 +82,3 @@ export function useUpdateTodo() {
   });
 }
 
-// -------- DELETE (optimistic) --------
-export function useDeleteTodo() {
-  const qc = useQueryClient();
-
-  return useMutation({
-    mutationFn: (_id: string) => todoService.remove(_id),
-    onMutate: async (_id): Promise<Ctx> => {
-      await qc.cancelQueries({ queryKey: TODOS_KEY });
-      const prev = qc.getQueryData<Todo[]>(TODOS_KEY) ?? [];
-
-      qc.setQueryData<Todo[]>(TODOS_KEY, (old = []) =>
-        old.filter((t) => t._id !== _id)
-      );
-
-      return { prev };
-    },
-    onError: (_err, _id, ctx) => {
-      if (ctx?.prev) qc.setQueryData(TODOS_KEY, ctx.prev);
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: TODOS_KEY });
-    },
-  });
-}

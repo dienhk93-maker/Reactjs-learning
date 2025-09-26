@@ -74,4 +74,33 @@ export class TodoRepository implements ITodoRepository {
       })
       .exec();
   }
+
+  async countByStatus(search?: string) : Promise<{total: number, done: number, open: number}> {
+    let query: Record<string, any> = {};
+    if (search) {
+      const regex = new RegExp(search, 'i');
+      query.$or = [
+        { title: { $regex: regex } },
+        { description: { $regex: regex } },
+      ];
+    }
+    const pipeline = [
+      { $match: {
+        ...query
+      } },
+      {
+        $facet: {
+          total: [{ $count: 'count' }],
+          done: [{ $match: { completed: true } }, { $count: 'count' }],
+          open: [{ $match: { completed: false } }, { $count: 'count' }],
+        },
+      },
+    ];
+    const result = await this.todoModel.aggregate(pipeline).exec();
+    return {
+      total: result[0]?.total[0]?.count || 0,
+      done: result[0]?.done[0]?.count || 0,
+      open: result[0]?.open[0]?.count || 0,
+    };
+  }
 }

@@ -51,17 +51,20 @@ export class TodoController {
     description: 'Filter todos by completion status',
     enum: ['true', 'false'],
   })
+  @ApiQuery({
+    name: 'search',
+    required: false,
+    description: 'Search todos by title or description',
+    example: 'NestJS',
+  })
   @ApiResponse({
     status: HttpStatus.OK,
     description: 'List of todos retrieved successfully.',
     type: [TodoResponseDto],
   })
-  findAll(@Query('completed') completed?: string) {
-    if (completed !== undefined) {
-      const isCompleted = completed === 'true';
-      return this.todoService.findByStatus(isCompleted);
-    }
-    return this.todoService.findAll();
+  findAll(@Query('completed') completed?: string,
+          @Query('search') search?: string) {
+    return this.todoService.getList({ completed, search });
   }
 
   @Get(':id')
@@ -128,7 +131,7 @@ export class TodoController {
     return this.todoService.remove(id);
   }
 
-  @Get('search')
+  @Get('search/text')
   @ApiOperation({ summary: 'Search todos by text in title or description' })
   @ApiQuery({
     name: 'q',
@@ -182,5 +185,26 @@ export class TodoController {
   async checkExists(@Param('id') id: string) {
     const exists = await this.todoService.exists(id);
     return { exists };
+  }
+
+  @Get('count/status')
+  @ApiQuery({ name: 'search', required: false })
+  @ApiOperation({ summary: 'Get count of todos by status' })
+  @ApiResponse({
+    status: HttpStatus.OK,
+    description: 'Count of todos retrieved successfully.',
+    schema: {
+      type: 'object',
+      properties: {
+        total: { type: 'number', example: 10 },
+        open: { type: 'number', example: 5 },
+        done: { type: 'number', example: 5 },
+      },
+    },
+  })
+  async countByStatus(
+    @Query('search') search?: string,
+  ) {
+    return this.todoService.countByStatus( search );
   }
 }

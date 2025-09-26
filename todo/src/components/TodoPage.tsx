@@ -1,15 +1,13 @@
 // src/components/TodoPage.tsx
 import React from "react";
-import { useTodos } from "../hooks/useTodos";
-import { useTodoFilters } from "../hooks/useTodoFilters";
-import {
-  useCreateTodo,
-  useDeleteTodo,
-  useUpdateTodo,
-} from "../hooks/useTodoMutations";
+import { useCreateTodo, useUpdateTodo } from "../hooks/useTodoMutations";
 import TodoItem from "./TodoItem";
-import type { CreateTodoInput } from "../types/todo";
+import type { CreateTodoInput, Todo } from "../types/todo";
 import TodoCreateModal from "./CreateTodoModal";
+import { useCountTodo } from "../hooks/useCountTodo";
+import { statusMapping, useTodoFilters } from "../hooks/useTodoFilters";
+import { useQueryClient } from "@tanstack/react-query";
+import { useTodoDelete } from "../hooks/useTodoDelete";
 
 function TodoSkeleton() {
   return (
@@ -31,22 +29,34 @@ function TodoSkeleton() {
 
 export default function TodoPage() {
   const {
-    data = [],
+    todos = [],
     isLoading,
     isError,
     error,
     refetch,
+    search,
+    setSearch,
+    filter,
+    setFilter,
     isRefetching,
-  } = useTodos({ limit: 20 });
-  const { filtered, counts, search, setSearch, filter, setFilter } =
-    useTodoFilters(data);
+  } = useTodoFilters();
 
+  const { data: counts } = useCountTodo({
+    completed: statusMapping[filter],
+    search,
+  });
   const createTodo = useCreateTodo();
-  const deleteTodo = useDeleteTodo();
   const updateTodo = useUpdateTodo();
+
+  const { deleteTodo, pending, undo } = useTodoDelete();
 
   const [isCreateOpen, setCreateOpen] = React.useState(false);
   const searchRef = React.useRef<HTMLInputElement>(null);
+
+  const qc = useQueryClient();
+  const refreshAll = () => {
+    qc.invalidateQueries({ queryKey: ["todos"] });
+  };
 
   // Keyboard shortcuts: "/" focus search, "n" open create
   React.useEffect(() => {
@@ -65,6 +75,8 @@ export default function TodoPage() {
         !e.ctrlKey &&
         !e.altKey
       ) {
+        const isSearchFocused = !!searchRef.current?.matches(":focus");
+        if (isSearchFocused) return;
         setCreateOpen(true);
       }
     };
@@ -72,13 +84,14 @@ export default function TodoPage() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
-  // Type fixes: id is string in your interface
   const handleCreate = (payload: CreateTodoInput) => {
     createTodo.mutate(payload);
   };
   const handleDelete = (id: string) => deleteTodo.mutate(id);
   const handleToggle = (id: string, completed: boolean) =>
     updateTodo.mutate({ _id: id, patch: { completed } });
+  const handleUpdate = (id: string, payload: Partial<Todo>) =>
+    updateTodo.mutate({ _id: id, patch: payload });
 
   const isBusy =
     createTodo.isPending ||
@@ -99,7 +112,7 @@ export default function TodoPage() {
               <div className="flex items-center gap-3">
                 <h1 className="text-2xl font-bold">📝 TODO List</h1>
                 <span className="hidden rounded-full border px-2 py-0.5 text-xs text-slate-600 sm:inline">
-                  {counts.total} items
+                  {counts?.total} items
                 </span>
                 {isBusy && (
                   <span className="inline-flex items-center gap-1 rounded-full bg-indigo-50 px-2 py-0.5 text-xs text-indigo-700">
@@ -145,7 +158,7 @@ export default function TodoPage() {
               >
                 ALL{" "}
                 <span className="ml-1 rounded-full bg-black/10 px-2">
-                  {counts.total}
+                  {counts?.total}
                 </span>
               </button>
 
@@ -159,7 +172,7 @@ export default function TodoPage() {
               >
                 OPEN{" "}
                 <span className="ml-1 rounded-full bg-amber-100 px-2 text-amber-800">
-                  {counts.open}
+                  {counts?.open}
                 </span>
               </button>
 
@@ -173,18 +186,28 @@ export default function TodoPage() {
               >
                 DONE{" "}
                 <span className="ml-1 rounded-full bg-emerald-100 px-2 text-emerald-800">
-                  {counts.done}
+                  {counts?.done}
                 </span>
               </button>
 
-              <button
-                onClick={() => refetch()}
-                className="ml-auto rounded-md border px-3 py-1 text-slate-700 hover:bg-slate-100"
-                title="Refresh list"
-                disabled={isRefetching}
-              >
-                ↻ Refresh
-              </button>
+              <div className="ml-auto flex items-center gap-2">
+                {pending && (
+                  <button
+                    onClick={undo}
+                    className="mr-auto rounded-md bg-red-600 px-3 py-1 text-white hover:bg-red-700"
+                  >
+                    Undo: &#9100;{" "}
+                  </button>
+                )}
+                <button
+                  onClick={refreshAll}
+                  className="ml-auto rounded-md border px-3 py-1 text-slate-700 hover:bg-slate-100"
+                  title="Refresh list"
+                  disabled={isRefetching}
+                >
+                  ↻ Refresh
+                </button>
+              </div>
             </div>
           </div>
 
@@ -223,7 +246,7 @@ export default function TodoPage() {
 
               {!isLoading && !isError && (
                 <>
-                  {filtered.length === 0 ? (
+                  {todos.length === 0 ? (
                     <div className="rounded-lg border bg-white p-10 text-center text-slate-500">
                       <div className="mb-2 text-4xl">🗒️</div>
                       <p className="mb-4">No todos found.</p>
@@ -250,7 +273,7 @@ export default function TodoPage() {
                       role="list"
                       aria-label="Todo items"
                     >
-                      {filtered.map((todo) => (
+                      {todos.map((todo) => (
                         <TodoItem
                           key={todo._id}
                           todo={todo}
@@ -258,6 +281,7 @@ export default function TodoPage() {
                             handleToggle(todo._id, !todo.completed)
                           }
                           onDelete={() => handleDelete(todo._id)}
+                          onUpdateTodo={handleUpdate}
                         />
                       ))}
                     </ul>
@@ -268,7 +292,6 @@ export default function TodoPage() {
           </div>
         </div>
       </div>
-
       <TodoCreateModal
         isOpen={isCreateOpen}
         onClose={() => setCreateOpen(false)}

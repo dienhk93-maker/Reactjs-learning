@@ -70,4 +70,23 @@ export class TodoService {
   async exists(id: string): Promise<boolean> {
     return this.todoRepository.exists(id);
   }
+
+  async countByStatus( search?: string) : Promise<{total: number, done: number, open: number}> {
+    return this.todoRepository.countByStatus(search);
+  }
+
+  async getList(filter: { completed?: string, search?: string }): Promise<Todo[]> {
+    const query: FilterQuery<TodoDocument> = {};
+    if (filter.completed !== undefined) {
+      query.completed = filter.completed === 'true';
+    }
+    if (filter.search) {
+      const regex = new RegExp(filter.search, 'i');
+      query.$or = [
+        { title: { $regex: regex } },
+        { description: { $regex: regex } },
+      ];
+    }
+    return this.todoRepository.findAll(query);
+  }
 }

@@ -9,7 +9,7 @@ type Props = {
   todo: Todo;
 };
 
-export default function UpdateCreateModal({
+export default function TodoUpdateModal({
   isOpen,
   onClose,
   onUpdate,
@@ -100,7 +100,7 @@ export default function UpdateCreateModal({
       >
         <div className="mb-4 flex items-center justify-between">
           <h3 id="todo-create-title" className="text-lg font-semibold">
-            Create TODO
+            Update TODO
           </h3>
           <button
             className="rounded p-2 hover:bg-gray-100"
@@ -217,7 +217,7 @@ export default function UpdateCreateModal({
                   : "bg-blue-600 hover:bg-blue-700"
               }`}
             >
-              Create
+              Save
             </button>
           </div>
         </form>
